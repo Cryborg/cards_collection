@@ -727,6 +727,7 @@ class UIManager {
     startCooldownUpdate() {
         this.updateInterval = setInterval(() => {
             this.updateDrawButton();
+            this.updateCreditCountdown();
         }, 1000);
     }
 

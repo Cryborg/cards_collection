@@ -11,9 +11,6 @@ class DatabaseManager {
         if (!cards || cards.length === 0 || !cards[0].baseRarity) {
             console.log('🔄 Mise à jour vers le nouveau système de rareté...');
             this.initializeDefaultCards();
-        } else {
-            // Vérifie si on doit ajouter les images aux cartes existantes
-            this.migrateCardImages();
         }
 
         // Migre la collection si nécessaire
@@ -26,64 +23,6 @@ class DatabaseManager {
     }
 
     // Génère un slug à partir du nom de la carte
-    generateSlug(name) {
-        return name
-            .toLowerCase()
-            .replace(/[àáâãäå]/g, 'a')
-            .replace(/[èéêë]/g, 'e')
-            .replace(/[ìíîï]/g, 'i')
-            .replace(/[òóôõö]/g, 'o')
-            .replace(/[ùúûü]/g, 'u')
-            .replace(/[ýÿ]/g, 'y')
-            .replace(/[ñ]/g, 'n')
-            .replace(/[ç]/g, 'c')
-            .replace(/[^a-z0-9]/g, '_')
-            .replace(/_+/g, '_')
-            .replace(/^_|_$/g, '');
-    }
-
-    // Vérifie si une image existe
-    checkImageExists(imagePath) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve(true);
-            img.onerror = () => resolve(false);
-            img.src = imagePath;
-        });
-    }
-
-    // Ajoute les images aux cartes qui n'en ont pas (détection automatique)
-    async migrateCardImages() {
-        const cards = this.getAllCards();
-        let needsUpdate = false;
-
-        for (const card of cards) {
-            const slug = this.generateSlug(card.name);
-            const expectedImagePath = `images/${slug}.webp`;
-
-            // Vérifie si l'image existe réellement
-            const imageExists = await this.checkImageExists(expectedImagePath);
-
-            if (imageExists) {
-                // Si l'image existe, on l'assigne
-                if (!card.image || card.image !== expectedImagePath) {
-                    card.image = expectedImagePath;
-                    needsUpdate = true;
-                }
-            } else {
-                // Si l'image n'existe pas, on supprime la référence
-                if (card.image) {
-                    delete card.image;
-                    needsUpdate = true;
-                }
-            }
-        }
-
-        if (needsUpdate) {
-            console.log('🖼️ Mise à jour automatique des images...');
-            this.saveCards(cards);
-        }
-    }
 
     // Migre l'ancienne collection vers le nouveau format
     migrateCollection() {
@@ -113,8 +52,9 @@ class DatabaseManager {
                 id: 'mc_01',
                 name: 'Creeper',
                 theme: 'minecraft',
-                baseRarity: 'common', // Rareté naturelle de la carte
+                baseRarity: 'common',
                 emoji: '💚',
+                image: 'images/creeper.webp',
                 description: 'Une créature explosive qui détruit tout sur son passage.'
             },
             {
@@ -123,6 +63,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'rare',
                 emoji: '👤',
+                image: 'images/enderman.webp',
                 description: 'Être mystérieux capable de téléportation.'
             },
             {
@@ -131,6 +72,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'very_rare',
                 emoji: '💎',
+                image: 'images/diamant.webp',
                 description: 'Le minerai le plus précieux du monde de Minecraft.'
             },
             {
@@ -139,6 +81,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'epic',
                 emoji: '🐉',
+                image: 'images/ender_dragon.webp',
                 description: 'Le boss final qui règne sur l\'End.'
             },
             {
@@ -147,6 +90,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'legendary',
                 emoji: '🧑‍🔧',
+                image: 'images/steve.webp',
                 description: 'Le héros légendaire de Minecraft.'
             },
             {
@@ -155,6 +99,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'common',
                 emoji: '🧟',
+                image: 'images/zombie.webp',
                 description: 'Mort-vivant qui erre dans la nuit.'
             },
             {
@@ -163,6 +108,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'epic',
                 emoji: '💀',
+                image: 'images/wither.webp',
                 description: 'Boss destructeur aux trois têtes.'
             },
             {
@@ -171,6 +117,7 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'rare',
                 emoji: '💚',
+                image: 'images/emeraude.webp',
                 description: 'Gemme précieuse pour le commerce.'
             },
 
@@ -181,6 +128,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'legendary',
                 emoji: '☀️',
+                image: 'images/soleil.jpg',
                 description: 'Notre étoile, source de toute vie sur Terre.'
             },
             {
@@ -189,6 +137,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'common',
                 emoji: '🌙',
+                image: 'images/lune.jpg',
                 description: 'Satellite naturel de la Terre.'
             },
             {
@@ -197,6 +146,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'rare',
                 emoji: '🔴',
+                image: 'images/mars.jpg',
                 description: 'La planète rouge, future destination humaine.'
             },
             {
@@ -205,6 +155,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'very_rare',
                 emoji: '🪐',
+                image: 'images/saturne.jpg',
                 description: 'Planète aux magnifiques anneaux.'
             },
             {
@@ -213,6 +164,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'epic',
                 emoji: '⚫',
+                image: 'images/trou_noir.webp',
                 description: 'Objet cosmique d\'une densité infinie.'
             },
             {
@@ -221,6 +173,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'epic',
                 emoji: '🌌',
+                image: 'images/galaxie.jpg',
                 description: 'Amas de milliards d\'étoiles.'
             },
             {
@@ -229,6 +182,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'rare',
                 emoji: '☄️',
+                image: 'images/comete.jpg',
                 description: 'Voyageuse glacée des confins du système solaire.'
             },
             {
@@ -237,6 +191,7 @@ class DatabaseManager {
                 theme: 'space',
                 baseRarity: 'very_rare',
                 emoji: '🌠',
+                image: 'images/nebuleuse.webp',
                 description: 'Nuage cosmique où naissent les étoiles.'
             },
 
@@ -247,6 +202,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'legendary',
                 emoji: '🦖',
+                image: 'images/t_rex.png',
                 description: 'Le roi des prédateurs du Crétacé.'
             },
             {
@@ -255,6 +211,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'rare',
                 emoji: '🦕',
+                image: 'images/triceratops.webp',
                 description: 'Herbivore aux trois cornes impressionnantes.'
             },
             {
@@ -263,6 +220,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'very_rare',
                 emoji: '🦅',
+                image: 'images/velociraptor.webp',
                 description: 'Chasseur intelligent et redoutable.'
             },
             {
@@ -271,6 +229,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'common',
                 emoji: '🦴',
+                image: 'images/diplodocus.jpg',
                 description: 'Géant au long cou et à la longue queue.'
             },
             {
@@ -279,14 +238,16 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'rare',
                 emoji: '🦋',
+                image: 'images/pterodactyle.jpg',
                 description: 'Reptile volant des temps préhistoriques.'
             },
             {
                 id: 'dino_06',
-                name: 'Spinosaurus',
+                name: 'Spinosaure',
                 theme: 'dinosaurs',
                 baseRarity: 'epic',
                 emoji: '🐊',
+                image: 'images/spinosaure.webp',
                 description: 'Prédateur aquatique à la voile dorsale.'
             },
             {
@@ -295,6 +256,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'common',
                 emoji: '🛡️',
+                image: 'images/ankylosaure.jpg',
                 description: 'Herbivore blindé comme un tank.'
             },
             {
@@ -303,6 +265,7 @@ class DatabaseManager {
                 theme: 'dinosaurs',
                 baseRarity: 'epic',
                 emoji: '🪶',
+                image: 'images/archeopteryx.jpg',
                 description: 'Lien évolutif entre dinosaures et oiseaux.'
             }
         ];
@@ -607,3 +570,4 @@ class DatabaseManager {
 
 // Instance globale
 const DB = new DatabaseManager();
+
