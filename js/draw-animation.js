@@ -182,11 +182,14 @@ class DrawAnimationManager {
 
     // Met à jour le contenu pour l'affichage multiple
     updateMultipleCardsContent(groupedCards) {
-        // Remplace le contenu de l'overlay par une grille de cartes
+        const cardCount = Object.keys(groupedCards).length;
+        const cardText = cardCount === 1 ? 'Carte piochée' : 'Cartes piochées';
+
+        // Utilise toujours la même présentation, qu'il y ait une ou plusieurs cartes
         this.overlay.innerHTML = `
             <div class="multiple-cards-container">
                 <div class="multiple-cards-header">
-                    <h2>🎁 Cartes piochées</h2>
+                    <h2>🎁 ${cardText}</h2>
                 </div>
                 <div class="multiple-cards-grid">
                     ${Object.values(groupedCards).map(cardData => this.createGroupedCardHTML(cardData)).join('')}
@@ -203,21 +206,34 @@ class DrawAnimationManager {
         this.bindMultipleCardsEvents();
     }
 
-    // Crée le HTML pour une carte groupée
+    // Crée le HTML pour une carte groupée (structure complète comme sur la page principale)
     createGroupedCardHTML(cardData) {
         const { card, count, wasNew } = cardData;
 
-        // Force la carte comme possédée pour l'affichage et utilise la fonction utilitaire
+        // Force la carte comme possédée pour l'affichage
         const cardForRender = { ...card, owned: true };
-        const cardVisual = UTILS.renderCardVisual(cardForRender, 'grouped', 'grouped-card-visual-content');
+        const cardVisual = UTILS.renderCardVisual(cardForRender, 'medium');
+
+        // Récupère la rareté actuelle de la carte
+        const currentRarity = DB.getCardCurrentRarity(card.id);
+        const rarityInfo = CONFIG.RARITIES[currentRarity];
 
         return `
             <div class="grouped-card ${wasNew ? 'new-card' : 'duplicate-card'}" data-card-id="${card.id}">
-                <div class="grouped-card-visual">
+                ${wasNew ? '<div class="new-card-badge">New!</div>' : ''}
+                ${count > 1 ? `<div class="card-count">×${count}</div>` : ''}
+                <div class="card-image">
                     ${cardVisual}
-                    ${count > 1 ? `<span class="grouped-card-count">×${count}</span>` : ''}
                 </div>
-                <div class="grouped-card-name">${card.name}</div>
+                <div class="card-info">
+                    <h3 class="card-name">${card.name}</h3>
+                    <div class="card-description">
+                        <span class="card-description-inner">${card.description}</span>
+                    </div>
+                </div>
+                <div class="card-rarity-banner ${currentRarity}" data-rarity="${currentRarity}">
+                    <span class="rarity-text">${rarityInfo.emoji} ${rarityInfo.name}</span>
+                </div>
             </div>
         `;
     }
@@ -254,6 +270,9 @@ class DrawAnimationManager {
         cardElements.forEach((cardElement, index) => {
             setTimeout(() => {
                 cardElement.classList.add('revealed');
+
+                // L'animation en boucle démarre automatiquement avec la classe CSS
+                // Pas besoin de code JavaScript supplémentaire
             }, index * 100);
         });
 
@@ -356,11 +375,15 @@ class DrawAnimationManager {
 
             // Nettoie les classes d'animation
             const animatedCard = this.overlay.querySelector('.animated-card');
-            animatedCard.classList.remove('flipping');
+            if (animatedCard) {
+                animatedCard.classList.remove('flipping');
+            }
 
             // Nettoie les particules
             const particlesContainer = this.overlay.querySelector('.particles');
-            particlesContainer.innerHTML = '';
+            if (particlesContainer) {
+                particlesContainer.innerHTML = '';
+            }
 
             this.isAnimating = false;
 

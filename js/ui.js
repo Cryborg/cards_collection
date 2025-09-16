@@ -60,7 +60,14 @@ class UIManager {
             modalContent: document.getElementById('modal-card-content'),
             modalActions: document.getElementById('modal-actions'),
             toast: document.getElementById('toast'),
-            themeTabs: document.querySelectorAll('.tab-btn')
+            themeTabs: document.querySelectorAll('.tab-btn'),
+            settingsBtn: document.getElementById('settings-btn'),
+            settingsModal: document.getElementById('settings-modal'),
+            settingsClose: document.getElementById('settings-close'),
+            passwordInput: document.getElementById('password-input'),
+            adminControls: document.getElementById('admin-controls'),
+            addCreditsBtn: document.getElementById('add-credits-btn'),
+            addSingleCreditBtn: document.getElementById('add-single-credit-btn')
         };
     }
 
@@ -117,6 +124,29 @@ class UIManager {
                 this.addBonusCredit();
             }
         });
+
+        // Paramètres - événements multiples pour compatibilité tactile
+        this.elements.settingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openSettings();
+        });
+        this.elements.settingsBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openSettings();
+        });
+
+        this.elements.settingsClose.addEventListener('click', () => this.closeSettings());
+        this.elements.settingsModal.addEventListener('click', (e) => {
+            if (e.target === this.elements.settingsModal) {
+                this.closeSettings();
+            }
+        });
+
+        this.elements.passwordInput.addEventListener('input', (e) => this.checkPassword(e.target.value));
+        this.elements.addCreditsBtn.addEventListener('click', () => this.addAdminCredits(5));
+        this.elements.addSingleCreditBtn.addEventListener('click', () => this.addAdminCredits(1));
     }
 
     // Met à jour l'affichage complet
@@ -481,9 +511,15 @@ class UIManager {
 
         if (result.success) {
             try {
-                // Si on a pioché plusieurs cartes, utilise l'animation multiple
-                if (result.totalDrawn > 1) {
+                // Utilise toujours l'animation multiple (qui gère aussi les cartes uniques)
+                if (result.totalDrawn >= 1) {
                     const animationResult = await DRAW_ANIMATION.showMultipleCardsAnimation(result.groupedCards);
+
+                    // Si une seule carte, bascule sur le thème de la carte
+                    if (result.totalDrawn === 1) {
+                        const firstCard = Object.values(result.groupedCards)[0].card;
+                        this.switchTheme(firstCard.theme);
+                    }
 
                     // Après l'animation, met à jour l'affichage
                     this.render();
@@ -497,44 +533,26 @@ class UIManager {
                                 setTimeout(() => cardElement.classList.remove('new-draw'), 800);
                             }
                         });
-                    }, 300);
 
-                    // Message de pioche multiple
-                    this.showToast(`${result.totalDrawn} cartes piochées !`, 'success');
-
-                } else {
-                    // Pioche simple : utilise l'ancienne animation
-                    const firstResult = result.results[0];
-                    const animationResult = await DRAW_ANIMATION.showCardAnimation(firstResult.card, firstResult.isDuplicate);
-
-                    // Après l'animation, bascule sur le thème de la carte
-                    this.switchTheme(firstResult.card.theme);
-
-                    // Met à jour l'affichage
-                    this.render();
-
-                    // Animation de la nouvelle carte dans la collection
-                    setTimeout(() => {
-                        const cardElement = document.querySelector(`[data-card-id="${firstResult.card.id}"]`);
-                        if (cardElement) {
-                            cardElement.classList.add('new-draw');
-                            setTimeout(() => cardElement.classList.remove('new-draw'), 800);
-
-                            // Scroll vers la carte si elle n'est pas visible
-                            cardElement.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'center',
-                                inline: 'nearest'
-                            });
+                        // Si une seule carte, scroll vers elle
+                        if (result.totalDrawn === 1) {
+                            const firstCardId = Object.keys(result.groupedCards)[0];
+                            const cardElement = document.querySelector(`[data-card-id="${firstCardId}"]`);
+                            if (cardElement) {
+                                cardElement.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center',
+                                    inline: 'nearest'
+                                });
+                            }
                         }
                     }, 300);
 
-                    // Affiche un message selon le résultat
-                    if (firstResult.isDuplicate) {
-                        this.showToast(`${firstResult.message} (${firstResult.newCount} exemplaires)`, 'info');
-                    } else {
-                        this.showToast(firstResult.message, 'success');
-                    }
+                    // Message adapté selon le nombre de cartes
+                    const message = result.totalDrawn === 1
+                        ? `1 carte piochée !`
+                        : `${result.totalDrawn} cartes piochées !`;
+                    this.showToast(message, 'success');
                 }
 
             } catch (error) {
@@ -563,8 +581,8 @@ class UIManager {
             const updatedCards = CARD_SYSTEM.getCardsWithCollectionInfo();
             const updatedCard = updatedCards.find(c => c.id === card.id);
 
-            // Réaffiche toujours la modal avec les nouvelles données pour voir le résultat
-            if (updatedCard) {
+            // Réaffiche la modal seulement si elle est encore ouverte
+            if (updatedCard && this.currentModal) {
                 this.showCardModal(updatedCard);
             }
 
@@ -745,6 +763,37 @@ class UIManager {
         const newCredits = DB.addCredits(1);
         this.updateStats();
         this.showToast(`+1 crédit bonus ! (${newCredits}/${CONFIG.CREDITS.MAX_STORED})`, 'success');
+    }
+
+    // Gestion des paramètres
+    openSettings() {
+        console.log('🔧 Ouverture des paramètres');
+        this.elements.settingsModal.style.display = 'block';
+        this.elements.passwordInput.value = '';
+        this.elements.adminControls.style.display = 'none';
+    }
+
+    closeSettings() {
+        this.elements.settingsModal.style.display = 'none';
+        this.elements.passwordInput.value = '';
+        this.elements.adminControls.style.display = 'none';
+    }
+
+    checkPassword(password) {
+        if (password === '13042018') {
+            this.elements.adminControls.style.display = 'block';
+        } else {
+            this.elements.adminControls.style.display = 'none';
+        }
+    }
+
+    addAdminCredits(amount) {
+        const currentCredits = DB.getCredits();
+        const newCredits = DB.addCredits(amount);
+
+        this.showToast(`+${amount} crédit${amount > 1 ? 's' : ''} bonus ajouté${amount > 1 ? 's' : ''} ! (${newCredits}/${CONFIG.CREDITS.MAX_STORED})`, 'success');
+        this.updateStats();
+        this.closeSettings();
     }
 
     // Nettoie les ressources

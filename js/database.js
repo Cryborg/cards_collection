@@ -520,25 +520,35 @@ class DatabaseManager {
     }
 
     // Gestion du crédit quotidien
-    getLastDailyCreditTime() {
-        return UTILS.loadFromStorage(CONFIG.STORAGE_KEYS.LAST_DAILY_CREDIT, 0);
+    getLastDailyCreditDate() {
+        // Stocke la date au format YYYY-MM-DD
+        return UTILS.loadFromStorage(CONFIG.STORAGE_KEYS.LAST_DAILY_CREDIT, null);
     }
 
-    saveLastDailyCreditTime() {
-        return UTILS.saveToStorage(CONFIG.STORAGE_KEYS.LAST_DAILY_CREDIT, Date.now());
+    saveLastDailyCreditDate() {
+        const today = new Date().toISOString().split('T')[0];
+        return UTILS.saveToStorage(CONFIG.STORAGE_KEYS.LAST_DAILY_CREDIT, today);
     }
 
     canClaimDailyCredit() {
-        const lastClaim = this.getLastDailyCreditTime();
-        const now = Date.now();
-        return (now - lastClaim) >= CONFIG.CREDITS.DAILY_COOLDOWN;
+        const lastClaimDate = this.getLastDailyCreditDate();
+        const today = new Date().toISOString().split('T')[0];
+
+        // Si jamais réclamé ou date différente d'aujourd'hui
+        return !lastClaimDate || lastClaimDate !== today;
     }
 
     getDailyCreditTimeLeft() {
-        const lastClaim = this.getLastDailyCreditTime();
-        const now = Date.now();
-        const timeLeft = CONFIG.CREDITS.DAILY_COOLDOWN - (now - lastClaim);
-        return Math.max(0, timeLeft);
+        if (this.canClaimDailyCredit()) {
+            return 0;
+        }
+
+        // Calcule le temps jusqu'à minuit
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+
+        return midnight.getTime() - now.getTime();
     }
 
     claimDailyCredit() {
@@ -546,14 +556,38 @@ class DatabaseManager {
             return { success: false, message: 'Crédit quotidien déjà réclamé' };
         }
 
-        const newCredits = this.addCredits(CONFIG.CREDITS.DAILY_BONUS);
-        this.saveLastDailyCreditTime();
+        const lastClaimDate = this.getLastDailyCreditDate();
+        const today = new Date().toISOString().split('T')[0];
+
+        // Si c'est la première connexion, marque aujourd'hui sans donner de crédits
+        if (!lastClaimDate) {
+            this.saveLastDailyCreditDate();
+            return {
+                success: false,
+                message: 'Première connexion - crédits quotidiens disponibles demain'
+            };
+        }
+
+        // Calcule le nombre de jours d'absence
+        const lastDate = new Date(lastClaimDate);
+        const currentDate = new Date(today);
+        const daysDifference = Math.floor((currentDate - lastDate) / (1000 * 60 * 60 * 24));
+
+        const creditsToAdd = daysDifference * CONFIG.CREDITS.DAILY_BONUS;
+        const newCredits = this.addCredits(creditsToAdd);
+        this.saveLastDailyCreditDate();
+
+        const dayText = daysDifference === 1 ? 'jour' : 'jours';
+        const creditText = creditsToAdd === 1 ? 'crédit' : 'crédits';
 
         return {
             success: true,
-            creditsAdded: CONFIG.CREDITS.DAILY_BONUS,
+            creditsAdded: creditsToAdd,
+            daysAwarded: daysDifference,
             totalCredits: newCredits,
-            message: `+${CONFIG.CREDITS.DAILY_BONUS} crédit quotidien !`
+            message: daysDifference === 1
+                ? `+${creditsToAdd} ${creditText} quotidien !`
+                : `+${creditsToAdd} ${creditText} pour ${daysDifference} ${dayText} d'absence !`
         };
     }
 
