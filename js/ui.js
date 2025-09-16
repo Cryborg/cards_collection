@@ -6,6 +6,31 @@ class UIManager {
         this.updateInterval = null;
     }
 
+    // Fonction utilitaire pour générer le HTML d'une image/emoji de carte
+    renderCardVisual(card, size = 'medium', className = '') {
+        return UTILS.renderCardVisual(card, size, className);
+    }
+
+    // Fonction pour générer les infos de rareté
+    renderRarityInfo(card) {
+        const currentRarityKey = card.currentRarity || 'common';
+        const currentRarity = CONFIG.RARITIES[currentRarityKey];
+
+        if (!card.owned) {
+            return {
+                display: 'Non possédée',
+                color: '#808080',
+                emoji: '❓'
+            };
+        }
+
+        return {
+            display: `${currentRarity.emoji} ${currentRarity.name}`,
+            color: currentRarity.color,
+            emoji: currentRarity.emoji
+        };
+    }
+
     // Initialise tous les éléments DOM
     init() {
         this.cacheElements();
@@ -77,7 +102,7 @@ class UIManager {
             if (e.key === 'Escape' && this.currentModal) {
                 this.closeModal();
             }
-            if (e.key === ' ' && !this.currentModal) {
+            if ((e.key === ' ' || e.key === 'p' || e.key === 'P') && !this.currentModal) {
                 e.preventDefault();
                 this.handleDraw();
             }
@@ -142,13 +167,20 @@ class UIManager {
             const completion = themeCards.length > 0 ?
                 Math.round((ownedThemeCards.length / themeCards.length) * 100) : 0;
 
+            // Vérifie s'il y a des cartes améliorables dans ce thème
+            const themeCardsWithInfo = CARD_SYSTEM.getCardsWithCollectionInfo(theme);
+            const upgradeableInTheme = themeCardsWithInfo.filter(card => card.canUpgrade).length;
+
             // Supprime les anciens indicateurs
             const existingIndicator = tab.querySelector('.theme-completion');
-            if (existingIndicator) {
-                existingIndicator.remove();
-            }
+            const existingUpgradeIndicator = tab.querySelector('.theme-upgrade-indicator');
+            if (existingIndicator) existingIndicator.remove();
+            if (existingUpgradeIndicator) existingUpgradeIndicator.remove();
 
-            // Crée le nouvel indicateur
+            // Calcule les statistiques par rareté pour ce thème
+            const rarityStats = this.calculateThemeRarityStats(theme);
+
+            // Crée le nouvel indicateur de progression
             const indicator = document.createElement('div');
             indicator.className = 'theme-completion';
 
@@ -159,19 +191,97 @@ class UIManager {
             else if (completion >= 50) indicatorClass = 'medium';
             else if (completion >= 25) indicatorClass = 'low-medium';
 
+            // Génère les segments de rareté
+            const raritySegments = this.generateRaritySegments(rarityStats, completion);
+
             indicator.innerHTML = `
                 <div class="completion-bar">
-                    <div class="completion-fill ${indicatorClass}" style="width: ${completion}%"></div>
+                    ${raritySegments}
                 </div>
                 <span class="completion-text">${completion}%</span>
             `;
 
             tab.appendChild(indicator);
 
+            // Ajoute l'indicateur d'amélioration si nécessaire
+            if (upgradeableInTheme > 0) {
+                const upgradeIndicator = document.createElement('div');
+                upgradeIndicator.className = 'theme-upgrade-indicator';
+                upgradeIndicator.innerHTML = `🔺`;
+                upgradeIndicator.title = `${upgradeableInTheme} carte(s) peuvent être améliorée(s)`;
+                tab.appendChild(upgradeIndicator);
+            }
+
             // Ajoute une classe pour styling différent selon la completion
             tab.classList.remove('complete', 'high', 'medium', 'low');
             tab.classList.add(indicatorClass);
         });
+    }
+
+    // Calcule les statistiques de rareté pour un thème
+    calculateThemeRarityStats(theme) {
+        const themeCards = CARD_SYSTEM.getCardsWithCollectionInfo(theme);
+        const totalCards = themeCards.length;
+
+        const rarityStats = {};
+
+        // Initialise les compteurs
+        Object.keys(CONFIG.RARITIES).forEach(rarity => {
+            rarityStats[rarity] = {
+                owned: 0,
+                total: 0,
+                percentage: 0,
+                color: CONFIG.RARITIES[rarity].color
+            };
+        });
+
+        // Compte les cartes par rareté actuelle
+        themeCards.forEach(card => {
+            const currentRarity = card.currentRarity || 'common';
+            rarityStats[currentRarity].total++;
+
+            if (card.owned) {
+                rarityStats[currentRarity].owned++;
+            }
+        });
+
+        // Calcule les pourcentages
+        Object.keys(rarityStats).forEach(rarity => {
+            const stats = rarityStats[rarity];
+            if (totalCards > 0) {
+                stats.percentage = (stats.owned / totalCards) * 100;
+            }
+        });
+
+        return rarityStats;
+    }
+
+    // Génère les segments HTML pour la barre de progression
+    generateRaritySegments(rarityStats, totalCompletion) {
+        let segments = '';
+        let position = 0;
+
+        // Ordre des raretés à afficher
+        const rarityOrder = ['common', 'rare', 'very_rare', 'epic', 'legendary'];
+
+        rarityOrder.forEach(rarity => {
+            const stats = rarityStats[rarity];
+            if (stats.percentage > 0) {
+                segments += `
+                    <div class="completion-segment rarity-${rarity}"
+                         style="
+                            left: ${position}%;
+                            width: ${stats.percentage}%;
+                            background-color: ${stats.color};
+                         "
+                         title="${CONFIG.RARITIES[rarity].name}: ${stats.owned} cartes (${stats.percentage.toFixed(1)}%)">
+                    </div>
+                `;
+                position += stats.percentage;
+            }
+        });
+
+        return segments;
     }
 
     // Affiche les cartes de la collection
@@ -192,51 +302,53 @@ class UIManager {
             const cardElement = this.createCardElement(card);
             this.elements.collectionGrid.appendChild(cardElement);
         });
+
+        // Active le scroll pour les descriptions trop longues après un court délai
+        setTimeout(() => this.checkScrollableDescriptions(), 100);
+    }
+
+    // Vérifie quelles descriptions ont besoin de scroll
+    checkScrollableDescriptions() {
+        const descriptions = document.querySelectorAll('.card-description');
+
+        descriptions.forEach(desc => {
+            const inner = desc.querySelector('.card-description-inner');
+            if (inner) {
+                // Vérifie si le contenu dépasse la hauteur max
+                if (inner.scrollHeight > desc.clientHeight + 5) {
+                    desc.classList.add('needs-scroll');
+                } else {
+                    desc.classList.remove('needs-scroll');
+                }
+            }
+        });
     }
 
     // Crée un élément carte
     createCardElement(card) {
         const cardDiv = document.createElement('div');
-
-        // Assure-toi que currentRarity existe, sinon utilise 'common'
         const currentRarityKey = card.currentRarity || 'common';
-        const baseRarityKey = card.baseRarity || 'common';
 
         cardDiv.className = `card ${card.owned ? 'owned' : 'not-owned'} ${currentRarityKey}`;
         cardDiv.dataset.cardId = card.id;
 
-        const currentRarity = CONFIG.RARITIES[currentRarityKey];
-        const baseRarity = CONFIG.RARITIES[baseRarityKey];
-
-        // Vérifie que les objets de rareté existent
-        if (!currentRarity || !baseRarity) {
-            console.error('Rareté introuvable:', { currentRarityKey, baseRarityKey, card });
-            return document.createElement('div'); // Retourne un div vide en cas d'erreur
-        }
-
-        const rarityDisplay = card.owned ?
-            `${currentRarity.emoji} ${currentRarity.name}` :
-            'Non possédée';
+        const rarityInfo = this.renderRarityInfo(card);
         const countDisplay = card.owned && card.count > 1 ? `<span class="card-count">×${card.count}</span>` : '';
 
         cardDiv.innerHTML = `
             ${countDisplay}
             <div class="card-image">
-                ${card.owned ?
-                    (card.image ?
-                        `<img src="${card.image}" alt="${card.name}" class="card-artwork" loading="lazy">` :
-                        `<span style="font-size: 3rem;">${card.emoji}</span>`
-                    ) :
-                    `<span class="mystery-card">❓</span>`
-                }
+                ${this.renderCardVisual(card, 'medium')}
             </div>
             <div class="card-info">
                 <h3>${card.owned ? card.name : '???'}</h3>
-                <div class="card-rarity" style="color: ${currentRarity.color}">
-                    ${rarityDisplay}
+                <div class="card-rarity" style="color: ${rarityInfo.color}">
+                    ${rarityInfo.display}
                 </div>
                 ${card.owned ?
-                    `<p class="card-description">${card.description}</p>` :
+                    `<div class="card-description">
+                        <span class="card-description-inner">${card.description}</span>
+                    </div>` :
                     `<p class="card-description mystery">Carte non découverte</p>`
                 }
                 ${card.canUpgrade ? `<div class="upgrade-hint">🔺 Améliorer (${card.upgradeInfo.cost} cartes → ${CONFIG.RARITIES[card.upgradeInfo.nextRarity].name})</div>` : ''}
@@ -272,13 +384,7 @@ class UIManager {
 
                     <div class="card-artwork">
                         <div class="artwork-frame">
-                            ${card.owned ?
-                                (card.image ?
-                                    `<img src="${card.image}" alt="${card.name}" class="card-artwork-image">` :
-                                    `<span class="card-emoji-large">${card.emoji}</span>`
-                                ) :
-                                `<span class="card-emoji-large mystery">❓</span>`
-                            }
+                            ${this.renderCardVisual(card, 'large', 'modal-visual')}
                             ${card.owned ? '<div class="holographic-effect"></div>' : ''}
                         </div>
                     </div>
@@ -383,43 +489,67 @@ class UIManager {
         const result = CARD_SYSTEM.drawCard();
 
         if (result.success) {
-            // Lance l'animation de la carte
             try {
-                const animationResult = await DRAW_ANIMATION.showCardAnimation(result.card, result.isDuplicate);
+                // Si on a pioché plusieurs cartes, utilise l'animation multiple
+                if (result.totalDrawn > 1) {
+                    const animationResult = await DRAW_ANIMATION.showMultipleCardsAnimation(result.groupedCards);
 
-                // Après l'animation, bascule sur le thème de la carte
-                this.switchTheme(result.card.theme);
+                    // Après l'animation, met à jour l'affichage
+                    this.render();
 
-                // Met à jour l'affichage
-                this.render();
-
-                // Animation de la nouvelle carte dans la collection
-                setTimeout(() => {
-                    const cardElement = document.querySelector(`[data-card-id="${result.card.id}"]`);
-                    if (cardElement) {
-                        cardElement.classList.add('new-draw');
-                        setTimeout(() => cardElement.classList.remove('new-draw'), 800);
-
-                        // Scroll vers la carte si elle n'est pas visible
-                        cardElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center',
-                            inline: 'nearest'
+                    // Animation des nouvelles cartes dans la collection
+                    setTimeout(() => {
+                        Object.keys(result.groupedCards).forEach(cardId => {
+                            const cardElement = document.querySelector(`[data-card-id="${cardId}"]`);
+                            if (cardElement) {
+                                cardElement.classList.add('new-draw');
+                                setTimeout(() => cardElement.classList.remove('new-draw'), 800);
+                            }
                         });
-                    }
-                }, 300);
+                    }, 300);
 
-                // Affiche un message selon le résultat
-                if (result.isDuplicate) {
-                    this.showToast(`${result.message} (${result.newCount} exemplaires)`, 'info');
+                    // Message de pioche multiple
+                    this.showToast(`${result.totalDrawn} cartes piochées !`, 'success');
+
                 } else {
-                    this.showToast(result.message, 'success');
+                    // Pioche simple : utilise l'ancienne animation
+                    const firstResult = result.results[0];
+                    const animationResult = await DRAW_ANIMATION.showCardAnimation(firstResult.card, firstResult.isDuplicate);
+
+                    // Après l'animation, bascule sur le thème de la carte
+                    this.switchTheme(firstResult.card.theme);
+
+                    // Met à jour l'affichage
+                    this.render();
+
+                    // Animation de la nouvelle carte dans la collection
+                    setTimeout(() => {
+                        const cardElement = document.querySelector(`[data-card-id="${firstResult.card.id}"]`);
+                        if (cardElement) {
+                            cardElement.classList.add('new-draw');
+                            setTimeout(() => cardElement.classList.remove('new-draw'), 800);
+
+                            // Scroll vers la carte si elle n'est pas visible
+                            cardElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center',
+                                inline: 'nearest'
+                            });
+                        }
+                    }, 300);
+
+                    // Affiche un message selon le résultat
+                    if (firstResult.isDuplicate) {
+                        this.showToast(`${firstResult.message} (${firstResult.newCount} exemplaires)`, 'info');
+                    } else {
+                        this.showToast(firstResult.message, 'success');
+                    }
                 }
 
             } catch (error) {
                 console.error('Erreur lors de l\'animation:', error);
                 // Fallback sans animation
-                this.showToast(result.message, result.isDuplicate ? 'info' : 'success');
+                this.showToast(`${result.totalDrawn} carte${result.totalDrawn > 1 ? 's' : ''} piochée${result.totalDrawn > 1 ? 's' : ''} !`, 'success');
                 this.render();
             }
         } else {
@@ -432,11 +562,11 @@ class UIManager {
         const result = CARD_SYSTEM.upgradeCard(card.id);
 
         if (result.success) {
+            // Met à jour l'affichage général IMMÉDIATEMENT (en arrière-plan)
+            this.render();
+
             // Lance l'animation d'amélioration
             await this.animateCardUpgrade(result.newRarity);
-
-            // Met à jour l'affichage général
-            this.render();
 
             // Récupère les nouvelles informations de la carte après amélioration
             const updatedCards = CARD_SYSTEM.getCardsWithCollectionInfo();
@@ -579,7 +709,8 @@ class UIManager {
 
         // Met à jour le texte du bouton selon la situation
         if (hasCredits) {
-            this.elements.drawButton.innerHTML = `🎁 Piocher une carte (${creditsCount})`;
+            const cardText = creditsCount === 1 ? 'carte' : 'cartes';
+            this.elements.drawButton.innerHTML = `🎁 Piocher ${creditsCount} ${cardText}`;
             this.elements.drawCooldown.style.display = 'none';
         } else if (canClaimDaily) {
             this.elements.drawButton.innerHTML = `🎁 Récupérer crédit gratuit`;

@@ -11,6 +11,9 @@ class DatabaseManager {
         if (!cards || cards.length === 0 || !cards[0].baseRarity) {
             console.log('🔄 Mise à jour vers le nouveau système de rareté...');
             this.initializeDefaultCards();
+        } else {
+            // Vérifie si on doit ajouter les images aux cartes existantes
+            this.migrateCardImages();
         }
 
         // Migre la collection si nécessaire
@@ -19,6 +22,66 @@ class DatabaseManager {
         const collection = this.getCollection();
         if (!collection) {
             this.saveCollection({});
+        }
+    }
+
+    // Génère un slug à partir du nom de la carte
+    generateSlug(name) {
+        return name
+            .toLowerCase()
+            .replace(/[àáâãäå]/g, 'a')
+            .replace(/[èéêë]/g, 'e')
+            .replace(/[ìíîï]/g, 'i')
+            .replace(/[òóôõö]/g, 'o')
+            .replace(/[ùúûü]/g, 'u')
+            .replace(/[ýÿ]/g, 'y')
+            .replace(/[ñ]/g, 'n')
+            .replace(/[ç]/g, 'c')
+            .replace(/[^a-z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '');
+    }
+
+    // Vérifie si une image existe
+    checkImageExists(imagePath) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = imagePath;
+        });
+    }
+
+    // Ajoute les images aux cartes qui n'en ont pas (détection automatique)
+    async migrateCardImages() {
+        const cards = this.getAllCards();
+        let needsUpdate = false;
+
+        for (const card of cards) {
+            const slug = this.generateSlug(card.name);
+            const expectedImagePath = `images/${slug}.webp`;
+
+            // Vérifie si l'image existe réellement
+            const imageExists = await this.checkImageExists(expectedImagePath);
+
+            if (imageExists) {
+                // Si l'image existe, on l'assigne
+                if (!card.image || card.image !== expectedImagePath) {
+                    card.image = expectedImagePath;
+                    needsUpdate = true;
+                }
+            } else {
+                // Si l'image n'existe pas, on supprime la référence
+                if (card.image) {
+                    delete card.image;
+                    needsUpdate = true;
+                }
+            }
+        }
+
+        if (needsUpdate) {
+            console.log('🖼️ Mise à jour automatique des images...');
+            this.saveCards(cards);
         }
     }
 
@@ -52,7 +115,6 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'common', // Rareté naturelle de la carte
                 emoji: '💚',
-                image: 'images/creeper.webp',
                 description: 'Une créature explosive qui détruit tout sur son passage.'
             },
             {
@@ -61,7 +123,6 @@ class DatabaseManager {
                 theme: 'minecraft',
                 baseRarity: 'rare',
                 emoji: '👤',
-                image: 'images/enderman.webp',
                 description: 'Être mystérieux capable de téléportation.'
             },
             {

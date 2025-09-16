@@ -8,8 +8,51 @@ class CardSystem {
         };
     }
 
-    // Pioche une carte aléatoire
-    drawCard() {
+    // Pioche plusieurs cartes d'un coup
+    drawMultipleCards(count = 1) {
+        const results = [];
+        const drawnCards = {};
+
+        for (let i = 0; i < count; i++) {
+            const result = this.drawSingleCard();
+            if (result.success) {
+                results.push(result);
+
+                // Groupe les cartes identiques
+                const cardId = result.card.id;
+                if (!drawnCards[cardId]) {
+                    drawnCards[cardId] = {
+                        card: result.card,
+                        count: 0,
+                        wasNew: !result.isDuplicate && i === results.findIndex(r => r.card.id === cardId)
+                    };
+                }
+                drawnCards[cardId].count++;
+            } else {
+                // Si une pioche échoue, on s'arrête
+                break;
+            }
+        }
+
+        return {
+            success: results.length > 0,
+            results: results,
+            groupedCards: drawnCards,
+            totalDrawn: results.length,
+            creditsUsed: count,
+            creditsRemaining: results.length > 0 ? results[results.length - 1].creditsRemaining : DB.getCredits()
+        };
+    }
+
+    // Pioche des cartes (interface publique)
+    drawCard(count = null) {
+        // Si pas de count spécifié, utilise tous les crédits disponibles
+        const creditsToUse = count || DB.getCredits();
+        return this.drawMultipleCards(creditsToUse);
+    }
+
+    // Pioche une carte aléatoire (fonction interne)
+    drawSingleCard() {
         // Vérifie si le joueur a des crédits
         if (!DB.hasCredits()) {
             return {

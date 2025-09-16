@@ -77,7 +77,7 @@ class DrawAnimationManager {
         });
     }
 
-    // Lance l'animation pour une carte donnée
+    // Lance l'animation pour une carte donnée (version simple)
     async showCardAnimation(card, isDuplicate = false) {
         if (this.isAnimating) return;
 
@@ -111,6 +111,31 @@ class DrawAnimationManager {
         });
     }
 
+    // Lance l'animation pour plusieurs cartes groupées
+    async showMultipleCardsAnimation(groupedCards) {
+        if (this.isAnimating) return;
+
+        this.isAnimating = true;
+        this.currentCards = groupedCards;
+
+        // Met à jour le contenu pour l'affichage multiple
+        this.updateMultipleCardsContent(groupedCards);
+
+        // Affiche l'overlay
+        this.overlay.style.display = 'flex';
+
+        // Force un reflow puis ajoute la classe show
+        this.overlay.offsetHeight;
+        this.overlay.classList.add('show');
+
+        // Animation d'apparition progressive des cartes
+        setTimeout(() => this.animateMultipleCardsReveal(groupedCards), 300);
+
+        return new Promise((resolve) => {
+            this.resolveAnimation = resolve;
+        });
+    }
+
     // Met à jour le contenu de la carte
     updateCardContent(card, isDuplicate) {
         // Les cartes apparaissent toujours en Common lors de la pioche
@@ -135,8 +160,8 @@ class DrawAnimationManager {
         }
         cardName.textContent = card.name;
         rarityEmoji.textContent = rarity.emoji;
-        rarityName.textContent = `${rarity.name} (Max: ${baseRarity.name})`;
-        cardDescription.textContent = card.description + ` Collecte des doublons pour améliorer cette carte vers sa rareté maximale : ${baseRarity.name}.`;
+        rarityName.textContent = rarity.name;
+        cardDescription.textContent = card.description;
 
         // Applique la classe de rareté (toujours common pour l'animation)
         frontFace.className = `card-face front common`;
@@ -153,6 +178,111 @@ class DrawAnimationManager {
             addBtn.innerHTML = '✅ Nouvelle carte !';
             addBtn.title = 'Première fois que vous obtenez cette carte';
         }
+    }
+
+    // Met à jour le contenu pour l'affichage multiple
+    updateMultipleCardsContent(groupedCards) {
+        // Remplace le contenu de l'overlay par une grille de cartes
+        this.overlay.innerHTML = `
+            <div class="multiple-cards-container">
+                <div class="multiple-cards-header">
+                    <h2>🎁 Cartes piochées</h2>
+                </div>
+                <div class="multiple-cards-grid">
+                    ${Object.values(groupedCards).map(cardData => this.createGroupedCardHTML(cardData)).join('')}
+                </div>
+                <div class="draw-animation-buttons">
+                    <button class="draw-animation-btn" id="close-multiple-animation-btn">
+                        ✨ Continuer
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Lie les nouveaux événements
+        this.bindMultipleCardsEvents();
+    }
+
+    // Crée le HTML pour une carte groupée
+    createGroupedCardHTML(cardData) {
+        const { card, count, wasNew } = cardData;
+
+        // Force la carte comme possédée pour l'affichage et utilise la fonction utilitaire
+        const cardForRender = { ...card, owned: true };
+        const cardVisual = UTILS.renderCardVisual(cardForRender, 'grouped', 'grouped-card-visual-content');
+
+        return `
+            <div class="grouped-card ${wasNew ? 'new-card' : 'duplicate-card'}" data-card-id="${card.id}">
+                <div class="grouped-card-visual">
+                    ${cardVisual}
+                    ${count > 1 ? `<span class="grouped-card-count">×${count}</span>` : ''}
+                </div>
+                <div class="grouped-card-name">${card.name}</div>
+            </div>
+        `;
+    }
+
+    // Lie les événements pour l'affichage multiple
+    bindMultipleCardsEvents() {
+        const closeBtn = this.overlay.querySelector('#close-multiple-animation-btn');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeMultipleAnimation());
+        }
+
+        // Ferme avec Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAnimating) {
+                this.closeMultipleAnimation();
+            }
+        });
+
+        // Ferme l'animation en cliquant sur l'overlay
+        this.overlay.addEventListener('click', (e) => {
+            if (e.target === this.overlay) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.closeMultipleAnimation();
+            }
+        });
+    }
+
+    // Animation d'apparition progressive des cartes groupées
+    animateMultipleCardsReveal(groupedCards) {
+        const cardElements = this.overlay.querySelectorAll('.grouped-card');
+
+        cardElements.forEach((cardElement, index) => {
+            setTimeout(() => {
+                cardElement.classList.add('revealed');
+            }, index * 100);
+        });
+
+        // Joue un son pour l'animation multiple
+        this.playDrawSound('multiple');
+    }
+
+    // Ferme l'animation multiple
+    closeMultipleAnimation() {
+        if (!this.isAnimating) return;
+
+        // Animation de fermeture
+        this.overlay.classList.remove('show');
+
+        setTimeout(() => {
+            this.overlay.style.display = 'none';
+            this.isAnimating = false;
+
+            // Résout la promesse avec le résultat
+            if (this.resolveAnimation) {
+                this.resolveAnimation({
+                    cards: this.currentCards,
+                    closed: true
+                });
+                this.resolveAnimation = null;
+            }
+
+            this.currentCards = null;
+        }, 300);
     }
 
     // Génère des particules pour les animations épiques/légendaires
@@ -189,6 +319,9 @@ class DrawAnimationManager {
         // Pour le moment, on utilise une vibration sur mobile si disponible
         if ('vibrate' in navigator) {
             switch (rarity) {
+                case 'multiple':
+                    navigator.vibrate([100, 50, 100, 50, 100, 50, 100]);
+                    break;
                 case 'legendary':
                     navigator.vibrate([200, 100, 200, 100, 200]);
                     break;
@@ -258,6 +391,7 @@ class DrawAnimationManager {
         this.overlay = null;
         this.isAnimating = false;
         this.currentCard = null;
+        this.currentCards = null;
     }
 }
 

@@ -173,6 +173,26 @@ const UTILS = {
             return `${minutes}m ${remainingSeconds}s`;
         }
         return `${remainingSeconds}s`;
+    },
+
+    // Fonction utilitaire pour rendre l'affichage visuel d'une carte (image ou emoji)
+    renderCardVisual(card, size = 'medium', className = '') {
+        if (!card.owned) {
+            return `<span class="mystery-card ${className}">❓</span>`;
+        }
+
+        if (card.image) {
+            return `<img src="${card.image}" alt="${card.name}" class="card-visual-image ${size} ${className}" loading="lazy">`;
+        }
+
+        const sizeClasses = {
+            small: 'font-size: 2rem;',
+            medium: 'font-size: 3rem;',
+            large: 'font-size: 6rem;',
+            grouped: 'font-size: 4.5rem;'
+        };
+
+        return `<span class="card-visual-emoji ${className}" style="${sizeClasses[size]}">${card.emoji}</span>`;
     }
 };
 

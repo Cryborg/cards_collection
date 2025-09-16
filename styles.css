@@ -149,6 +149,36 @@ body {
     width: 100%;
 }
 
+/* Indicateur d'amélioration sur les onglets */
+.theme-upgrade-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #ef4444;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 10;
+    animation: pulse-upgrade 2s ease-in-out infinite;
+    cursor: pointer;
+}
+
+@keyframes pulse-upgrade {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+}
+
 .completion-bar {
     width: 100%;
     height: 4px;
@@ -156,6 +186,49 @@ body {
     border-radius: 2px;
     overflow: hidden;
     position: relative;
+}
+
+/* Segments de rareté dans la barre de progression */
+.completion-segment {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all var(--transition-normal);
+    border-radius: 2px;
+}
+
+/* Styles spécifiques pour chaque rareté */
+.completion-segment.rarity-common {
+    opacity: 0.9;
+}
+
+.completion-segment.rarity-rare {
+    opacity: 0.95;
+}
+
+.completion-segment.rarity-very-rare {
+    opacity: 1;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
+}
+
+.completion-segment.rarity-epic {
+    opacity: 1;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+}
+
+.completion-segment.rarity-legendary {
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+    animation: legendary-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendary-glow {
+    from {
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+    }
+    to {
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    }
 }
 
 .completion-fill {
@@ -366,8 +439,8 @@ body {
     position: relative;
 }
 
-/* Style pour les images dans les cartes */
-.card-artwork {
+/* Style unifié pour les visuels de cartes (images et emojis) */
+.card-visual-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -375,8 +448,67 @@ body {
     transition: transform var(--transition-normal);
 }
 
-.card:hover .card-artwork {
-    transform: scale(1.05);
+.card-visual-image.small {
+    max-height: 80px;
+}
+
+.card-visual-image.medium {
+    max-height: 150px;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.card-visual-image.large {
+    max-height: 200px;
+    object-fit: cover;
+    object-position: center top;
+}
+
+/* Animation de défilement vertical automatique pour les images */
+.card-visual-image.medium {
+    animation: pan-vertical 12s ease-in-out infinite;
+    transform-origin: center;
+}
+
+@keyframes pan-vertical {
+    0%, 15% {
+        object-position: center top;
+    }
+    42%, 58% {
+        object-position: center bottom;
+    }
+    85%, 100% {
+        object-position: center top;
+    }
+}
+
+.card-visual-emoji {
+    display: inline-block;
+    transition: transform var(--transition-normal);
+}
+
+/* Visuels dans la modal */
+.modal-visual {
+    z-index: 2;
+    position: relative;
+}
+
+/* Animation automatique pour les grandes images dans la modal */
+.modal-visual.card-visual-image.large {
+    object-position: center top;
+    animation: pan-vertical-modal 16s ease-in-out infinite;
+}
+
+@keyframes pan-vertical-modal {
+    0%, 20% {
+        object-position: center top;
+    }
+    40%, 60% {
+        object-position: center bottom;
+    }
+    80%, 100% {
+        object-position: center top;
+    }
 }
 
 .card-info h3 {
@@ -409,6 +541,43 @@ body {
     color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.4;
+    max-height: 65px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Animation de défilement pour descriptions longues */
+.card-description.needs-scroll {
+    mask-image: linear-gradient(to bottom,
+        black 0%,
+        black 80%,
+        transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom,
+        black 0%,
+        black 80%,
+        transparent 100%);
+}
+
+.card-description-inner {
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+/* Animation au hover uniquement si nécessaire */
+.card:hover .card-description.needs-scroll .card-description-inner {
+    animation: scrollText 8s linear infinite;
+}
+
+@keyframes scrollText {
+    0%, 10% {
+        transform: translateY(0);
+    }
+    45%, 55% {
+        transform: translateY(calc(-100% + 65px));
+    }
+    90%, 100% {
+        transform: translateY(0);
+    }
 }
 
 .card-count {
@@ -421,6 +590,8 @@ body {
     border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.4);
 }
 
 /* Cartes mystères */
@@ -1085,6 +1256,32 @@ body {
     height: 100%;
     object-fit: cover;
     border-radius: 15px;
+    object-position: center top;
+}
+
+/* Animation automatique dans l'animation de pioche */
+.animated-card-image .animated-card-image-content {
+    animation: pan-vertical-draw 20s ease-in-out infinite !important;
+    z-index: 3;
+    position: relative;
+}
+
+/* Assure-toi que l'animation démarre immédiatement */
+.animated-card-image .animated-card-image-content {
+    animation-delay: 0s !important;
+    animation-play-state: running !important;
+}
+
+@keyframes pan-vertical-draw {
+    0%, 25% {
+        object-position: center top;
+    }
+    37%, 63% {
+        object-position: center bottom;
+    }
+    75%, 100% {
+        object-position: center top;
+    }
 }
 
 .animated-card-image::before {
@@ -1097,6 +1294,8 @@ body {
     background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     transform: rotate(45deg);
     animation: shine 3s ease-in-out infinite;
+    z-index: 1;
+    pointer-events: none;
 }
 
 @keyframes shine {
@@ -1242,6 +1441,114 @@ body {
         opacity: 1;
         transform: scale(1) rotateY(0deg);
     }
+}
+
+/* Styles pour l'affichage multiple de cartes */
+.multiple-cards-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    max-width: 800px;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    border: 2px solid var(--accent-primary);
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+}
+
+.multiple-cards-header {
+    margin-bottom: 20px;
+}
+
+.multiple-cards-header h2 {
+    color: var(--text-primary);
+    font-size: 1.8rem;
+    text-align: center;
+    margin: 0;
+}
+
+.multiple-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.grouped-card {
+    background: var(--bg-primary);
+    border-radius: 15px;
+    padding: 15px;
+    border: 2px solid transparent;
+    transition: all var(--transition-normal);
+    opacity: 0;
+    transform: translateY(20px);
+    position: relative;
+}
+
+.grouped-card.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.grouped-card.new-card {
+    border-color: var(--rarity-rare);
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+}
+
+.grouped-card.duplicate-card {
+    border-color: var(--text-secondary);
+}
+
+.grouped-card-visual {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 120px;
+    margin-bottom: 15px;
+}
+
+.grouped-card-visual-content.card-visual-image {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.grouped-card-visual-content.card-visual-emoji {
+    font-size: 4.5rem !important;
+}
+
+.grouped-card-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-primary);
+    color: var(--text-primary);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+    border: 3px solid var(--bg-primary);
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.grouped-card-name {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: auto;
 }
 
 .card.new-draw {
