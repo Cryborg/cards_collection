@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🃏 Collection de Cartes</title>
+    <script src="../../version.js"></script>
+    <script src="../../arcade-theme-integration.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../../arcade-theme.css">
+</head>
+<body>
+    <div class="container">
+        <header class="game-header">
+            <h1>🃏 Album de Collection</h1>
+            <div class="player-stats">
+                <div class="stat">
+                    <span class="label">Cartes uniques:</span>
+                    <span id="unique-cards">0</span>/<span id="total-cards">0</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Progression:</span>
+                    <span id="completion-percentage">0%</span>
+                </div>
+                <div class="stat countdown-stat">
+                    <span class="label">Prochain crédit gratuit:</span>
+                    <span id="next-credit-countdown">--:--:--</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="theme-tabs">
+            <button class="tab-btn active" data-theme="minecraft">🟫 Minecraft</button>
+            <button class="tab-btn" data-theme="space">🌌 Astronomie</button>
+            <button class="tab-btn" data-theme="dinosaurs">🦕 Dinosaures</button>
+        </nav>
+
+        <main class="main-content">
+            <section class="action-panel">
+                <button id="draw-card-btn" class="draw-btn">
+                    🎁 Piocher une carte
+                    <span class="draw-cooldown" id="draw-cooldown"></span>
+                </button>
+                <div class="filters">
+                    <select id="rarity-filter">
+                        <option value="">Toutes les raretés</option>
+                        <option value="common">🤍 Commune</option>
+                        <option value="rare">💙 Rare</option>
+                        <option value="very_rare">💚 Très Rare</option>
+                        <option value="epic">💛 Épique</option>
+                        <option value="legendary">❤️ Légendaire</option>
+                    </select>
+                    <input type="search" id="search-filter" placeholder="Rechercher une carte...">
+                </div>
+            </section>
+
+            <section class="collection-grid" id="collection-grid">
+                <!-- Les cartes seront générées dynamiquement -->
+            </section>
+        </main>
+
+        <!-- Modal pour afficher les détails d'une carte -->
+        <div id="card-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modal-card-content"></div>
+                <div class="modal-actions" id="modal-actions"></div>
+            </div>
+        </div>
+
+        <!-- Toast pour les notifications -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/card-system.js"></script>
+    <script src="js/draw-animation.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
