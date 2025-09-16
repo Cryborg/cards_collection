@@ -426,7 +426,7 @@ body {
 
 .card-image {
     width: 100%;
-    height: 150px;
+    height: 210px;
     background: linear-gradient(135deg, var(--bg-primary), var(--bg-hover));
     border-radius: 12px;
     margin-bottom: 15px;
@@ -453,7 +453,7 @@ body {
 }
 
 .card-visual-image.medium {
-    max-height: 150px;
+    max-height: 210px;
     object-fit: cover;
     object-position: center top;
 }
@@ -517,13 +517,96 @@ body {
     color: var(--text-primary);
 }
 
-.card-rarity {
-    display: inline-flex;
+.card-name {
+    text-align: center;
+    margin: 0;
+    padding-bottom: 20px;
+}
+
+/* Bandeau de rareté en bas de carte avec dégradé */
+.card-rarity-banner {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.9rem;
+    justify-content: center;
+    border-radius: 0 0 15px 15px;
+    backdrop-filter: blur(5px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-rarity-banner .rarity-text {
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 2;
+    position: relative;
+}
+
+/* Dégradés pour chaque rareté */
+.card-rarity-banner.mystery {
+    background: linear-gradient(90deg,
+        rgba(128, 128, 128, 0.9) 0%,
+        rgba(128, 128, 128, 1) 50%,
+        rgba(128, 128, 128, 0.9) 100%);
+}
+
+.card-rarity-banner.common {
+    background: linear-gradient(90deg,
+        rgba(185, 185, 185, 0.9) 0%,
+        rgba(185, 185, 185, 1) 50%,
+        rgba(185, 185, 185, 0.9) 100%);
+}
+
+.card-rarity-banner.rare {
+    background: linear-gradient(90deg,
+        rgba(52, 152, 219, 0.9) 0%,
+        rgba(52, 152, 219, 1) 50%,
+        rgba(52, 152, 219, 0.9) 100%);
+}
+
+.card-rarity-banner.very_rare {
+    background: linear-gradient(90deg,
+        rgba(155, 89, 182, 0.9) 0%,
+        rgba(155, 89, 182, 1) 50%,
+        rgba(155, 89, 182, 0.9) 100%);
+}
+
+.card-rarity-banner.epic {
+    background: linear-gradient(90deg,
+        rgba(241, 196, 15, 0.9) 0%,
+        rgba(241, 196, 15, 1) 50%,
+        rgba(241, 196, 15, 0.9) 100%);
+}
+
+.card-rarity-banner.legendary {
+    background: linear-gradient(90deg,
+        rgba(231, 76, 60, 0.9) 0%,
+        rgba(231, 76, 60, 1) 20%,
+        rgba(255, 215, 0, 1) 50%,
+        rgba(231, 76, 60, 1) 80%,
+        rgba(231, 76, 60, 0.9) 100%);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* Animation d'apparition du bandeau */
+.card-rarity-banner {
+    animation: bannerSlideUp 0.3s ease-out;
+}
+
+@keyframes bannerSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .card-points {
@@ -592,6 +675,44 @@ body {
     font-weight: 600;
     z-index: 10;
     box-shadow: 0 2px 8px rgba(74, 158, 255, 0.4);
+}
+
+/* Indicateur d'amélioration sur les cartes */
+.card-upgrade-indicator {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 6px;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: pulse-upgrade 2s ease-in-out infinite;
+}
+
+.card-upgrade-indicator:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.7);
+}
+
+@keyframes pulse-upgrade {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
 }
 
 /* Cartes mystères */
@@ -928,14 +1049,18 @@ body {
 }
 
 .modal-btn.upgrade-btn {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2));
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    color: var(--text-primary);
     flex-direction: column;
     align-items: center;
     gap: 5px;
 }
 
 .modal-btn.upgrade-btn:hover {
-    background: linear-gradient(135deg, #059669, #047857);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3));
+    border-color: rgba(16, 185, 129, 0.6);
+    transform: translateY(-2px);
 }
 
 .btn-cost {

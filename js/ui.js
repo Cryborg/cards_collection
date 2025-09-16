@@ -54,6 +54,7 @@ class UIManager {
             drawCooldown: document.getElementById('draw-cooldown'),
             collectionGrid: document.getElementById('collection-grid'),
             rarityFilter: document.getElementById('rarity-filter'),
+            sortFilter: document.getElementById('sort-filter'),
             searchFilter: document.getElementById('search-filter'),
             modal: document.getElementById('card-modal'),
             modalContent: document.getElementById('modal-card-content'),
@@ -79,6 +80,11 @@ class UIManager {
         // Filtres
         this.elements.rarityFilter.addEventListener('change', (e) => {
             CARD_SYSTEM.setFilters({ rarity: e.target.value });
+            this.renderCards();
+        });
+
+        this.elements.sortFilter.addEventListener('change', (e) => {
+            CARD_SYSTEM.setFilters({ sort: e.target.value });
             this.renderCards();
         });
 
@@ -334,24 +340,19 @@ class UIManager {
 
         const rarityInfo = this.renderRarityInfo(card);
         const countDisplay = card.owned && card.count > 1 ? `<span class="card-count">×${card.count}</span>` : '';
+        const upgradeIndicator = card.canUpgrade ? `<div class="card-upgrade-indicator" title="Peut être améliorée : ${card.upgradeInfo.cost} cartes → ${CONFIG.RARITIES[card.upgradeInfo.nextRarity].name}">🔺</div>` : '';
 
         cardDiv.innerHTML = `
             ${countDisplay}
+            ${upgradeIndicator}
             <div class="card-image">
                 ${this.renderCardVisual(card, 'medium')}
             </div>
             <div class="card-info">
-                <h3>${card.owned ? card.name : '???'}</h3>
-                <div class="card-rarity" style="color: ${rarityInfo.color}">
-                    ${rarityInfo.display}
-                </div>
-                ${card.owned ?
-                    `<div class="card-description">
-                        <span class="card-description-inner">${card.description}</span>
-                    </div>` :
-                    `<p class="card-description mystery">Carte non découverte</p>`
-                }
-                ${card.canUpgrade ? `<div class="upgrade-hint">🔺 Améliorer (${card.upgradeInfo.cost} cartes → ${CONFIG.RARITIES[card.upgradeInfo.nextRarity].name})</div>` : ''}
+                <h3 class="card-name">${card.owned ? card.name : '???'}</h3>
+            </div>
+            <div class="card-rarity-banner ${card.owned ? card.currentRarity : 'mystery'}" data-rarity="${card.owned ? card.currentRarity : 'mystery'}">
+                <span class="rarity-text">${rarityInfo.display}</span>
             </div>
         `;
 
@@ -397,7 +398,6 @@ class UIManager {
 
                         ${card.owned && currentRarityKey !== 'legendary' ? `
                             <div class="upgrade-progress">
-                                <div class="progress-label">Amélioration suivante</div>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: ${upgradeInfo ? Math.min((card.count / upgradeInfo.cost) * 100, 100) : 0}%"></div>
                                 </div>
@@ -406,10 +406,6 @@ class UIManager {
                         ` : ''}
                     </div>
 
-                    <div class="card-footer">
-                        ${card.owned ? `<div class="card-collection-number">#${card.id}</div>` : ''}
-                        <div class="card-theme">${CONFIG.THEMES[card.theme].emoji} ${CONFIG.THEMES[card.theme].name}</div>
-                    </div>
                 </div>
             </div>
         `;
@@ -450,11 +446,6 @@ class UIManager {
             }
         }
 
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'modal-btn secondary';
-        closeBtn.innerHTML = '<span class="btn-icon">✕</span><span class="btn-text">Fermer</span>';
-        closeBtn.addEventListener('click', () => this.closeModal());
-        this.elements.modalActions.appendChild(closeBtn);
 
         this.elements.modal.style.display = 'block';
         this.currentModal = card;
@@ -572,13 +563,9 @@ class UIManager {
             const updatedCards = CARD_SYSTEM.getCardsWithCollectionInfo();
             const updatedCard = updatedCards.find(c => c.id === card.id);
 
-            // Vérifie si on peut encore améliorer cette carte
-            if (updatedCard && updatedCard.canUpgrade) {
-                // Réaffiche la modal avec les nouvelles données
+            // Réaffiche toujours la modal avec les nouvelles données pour voir le résultat
+            if (updatedCard) {
                 this.showCardModal(updatedCard);
-            } else {
-                // Ferme la modal si plus d'amélioration possible
-                this.closeModal();
             }
 
             // Message avec crédits gagnés s'il y en a
