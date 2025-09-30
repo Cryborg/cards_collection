@@ -64,10 +64,11 @@ class UIManager {
             settingsBtn: document.getElementById('settings-btn'),
             settingsModal: document.getElementById('settings-modal'),
             settingsClose: document.getElementById('settings-close'),
+            passwordSection: document.getElementById('password-section'),
             passwordInput: document.getElementById('password-input'),
             adminControls: document.getElementById('admin-controls'),
             addCreditsBtn: document.getElementById('add-credits-btn'),
-            addSingleCreditBtn: document.getElementById('add-single-credit-btn')
+            creditsAmountInput: document.getElementById('credits-amount-input')
         };
     }
 
@@ -145,8 +146,7 @@ class UIManager {
         });
 
         this.elements.passwordInput.addEventListener('input', (e) => this.checkPassword(e.target.value));
-        this.elements.addCreditsBtn.addEventListener('click', () => this.addAdminCredits(5));
-        this.elements.addSingleCreditBtn.addEventListener('click', () => this.addAdminCredits(1));
+        this.elements.addCreditsBtn.addEventListener('click', () => this.validateAdminCredits());
     }
 
     // Met à jour l'affichage complet
@@ -770,24 +770,47 @@ class UIManager {
         console.log('🔧 Ouverture des paramètres');
         this.elements.settingsModal.style.display = 'block';
         this.elements.passwordInput.value = '';
+        this.elements.passwordSection.style.display = 'block';
         this.elements.adminControls.style.display = 'none';
+
+        // Met le focus sur le champ mot de passe avec un léger délai
+        setTimeout(() => {
+            if (this.elements.passwordInput) {
+                this.elements.passwordInput.focus();
+            }
+        }, 100);
     }
 
     closeSettings() {
         this.elements.settingsModal.style.display = 'none';
         this.elements.passwordInput.value = '';
+        this.elements.passwordSection.style.display = 'block';
         this.elements.adminControls.style.display = 'none';
     }
 
     checkPassword(password) {
         if (password === '13042018') {
+            this.elements.passwordSection.style.display = 'none';
             this.elements.adminControls.style.display = 'block';
+            // Met le focus sur le champ de crédits avec un léger délai pour laisser le temps à l'affichage
+            setTimeout(() => {
+                if (this.elements.creditsAmountInput) {
+                    this.elements.creditsAmountInput.focus();
+                }
+            }, 100);
         } else {
             this.elements.adminControls.style.display = 'none';
         }
     }
 
-    addAdminCredits(amount) {
+    validateAdminCredits() {
+        const amount = parseInt(this.elements.creditsAmountInput.value);
+
+        if (!amount || amount < 1 || amount > 99) {
+            this.showToast('Veuillez entrer un nombre entre 1 et 99', 'error');
+            return;
+        }
+
         const currentCredits = DB.getCredits();
         const newCredits = DB.addCredits(amount);
 

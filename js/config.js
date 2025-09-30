@@ -49,7 +49,7 @@ const CONFIG = {
     CREDITS: {
         INITIAL: 5, // Crédits de départ
         DAILY_BONUS: 5, // Crédits quotidiens
-        MAX_STORED: 50, // Maximum de crédits stockables
+        MAX_STORED: 99, // Maximum de crédits stockables
         EXCESS_CARD_VALUE: 1, // Une carte en trop = 1 crédit
         DAILY_COOLDOWN: 24 * 60 * 60 * 1000 // 24h en millisecondes
     },
