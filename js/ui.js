@@ -54,12 +54,21 @@ class UIManager {
             drawCooldown: document.getElementById('draw-cooldown'),
             collectionGrid: document.getElementById('collection-grid'),
             rarityFilter: document.getElementById('rarity-filter'),
+            sortFilter: document.getElementById('sort-filter'),
             searchFilter: document.getElementById('search-filter'),
             modal: document.getElementById('card-modal'),
             modalContent: document.getElementById('modal-card-content'),
             modalActions: document.getElementById('modal-actions'),
             toast: document.getElementById('toast'),
-            themeTabs: document.querySelectorAll('.tab-btn')
+            themeTabs: document.querySelectorAll('.tab-btn'),
+            settingsBtn: document.getElementById('settings-btn'),
+            settingsModal: document.getElementById('settings-modal'),
+            settingsClose: document.getElementById('settings-close'),
+            passwordSection: document.getElementById('password-section'),
+            passwordInput: document.getElementById('password-input'),
+            adminControls: document.getElementById('admin-controls'),
+            addCreditsBtn: document.getElementById('add-credits-btn'),
+            creditsAmountInput: document.getElementById('credits-amount-input')
         };
     }
 
@@ -79,6 +88,11 @@ class UIManager {
         // Filtres
         this.elements.rarityFilter.addEventListener('change', (e) => {
             CARD_SYSTEM.setFilters({ rarity: e.target.value });
+            this.renderCards();
+        });
+
+        this.elements.sortFilter.addEventListener('change', (e) => {
+            CARD_SYSTEM.setFilters({ sort: e.target.value });
             this.renderCards();
         });
 
@@ -111,6 +125,28 @@ class UIManager {
                 this.addBonusCredit();
             }
         });
+
+        // Paramètres - événements multiples pour compatibilité tactile
+        this.elements.settingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openSettings();
+        });
+        this.elements.settingsBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openSettings();
+        });
+
+        this.elements.settingsClose.addEventListener('click', () => this.closeSettings());
+        this.elements.settingsModal.addEventListener('click', (e) => {
+            if (e.target === this.elements.settingsModal) {
+                this.closeSettings();
+            }
+        });
+
+        this.elements.passwordInput.addEventListener('input', (e) => this.checkPassword(e.target.value));
+        this.elements.addCreditsBtn.addEventListener('click', () => this.validateAdminCredits());
     }
 
     // Met à jour l'affichage complet
@@ -334,24 +370,19 @@ class UIManager {
 
         const rarityInfo = this.renderRarityInfo(card);
         const countDisplay = card.owned && card.count > 1 ? `<span class="card-count">×${card.count}</span>` : '';
+        const upgradeIndicator = card.canUpgrade ? `<div class="card-upgrade-indicator" title="Peut être améliorée : ${card.upgradeInfo.cost} cartes → ${CONFIG.RARITIES[card.upgradeInfo.nextRarity].name}">🔺</div>` : '';
 
         cardDiv.innerHTML = `
             ${countDisplay}
+            ${upgradeIndicator}
             <div class="card-image">
                 ${this.renderCardVisual(card, 'medium')}
             </div>
             <div class="card-info">
-                <h3>${card.owned ? card.name : '???'}</h3>
-                <div class="card-rarity" style="color: ${rarityInfo.color}">
-                    ${rarityInfo.display}
-                </div>
-                ${card.owned ?
-                    `<div class="card-description">
-                        <span class="card-description-inner">${card.description}</span>
-                    </div>` :
-                    `<p class="card-description mystery">Carte non découverte</p>`
-                }
-                ${card.canUpgrade ? `<div class="upgrade-hint">🔺 Améliorer (${card.upgradeInfo.cost} cartes → ${CONFIG.RARITIES[card.upgradeInfo.nextRarity].name})</div>` : ''}
+                <h3 class="card-name">${card.owned ? card.name : '???'}</h3>
+            </div>
+            <div class="card-rarity-banner ${card.owned ? card.currentRarity : 'mystery'}" data-rarity="${card.owned ? card.currentRarity : 'mystery'}">
+                <span class="rarity-text">${rarityInfo.display}</span>
             </div>
         `;
 
@@ -397,7 +428,6 @@ class UIManager {
 
                         ${card.owned && currentRarityKey !== 'legendary' ? `
                             <div class="upgrade-progress">
-                                <div class="progress-label">Amélioration suivante</div>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: ${upgradeInfo ? Math.min((card.count / upgradeInfo.cost) * 100, 100) : 0}%"></div>
                                 </div>
@@ -406,10 +436,6 @@ class UIManager {
                         ` : ''}
                     </div>
 
-                    <div class="card-footer">
-                        ${card.owned ? `<div class="card-collection-number">#${card.id}</div>` : ''}
-                        <div class="card-theme">${CONFIG.THEMES[card.theme].emoji} ${CONFIG.THEMES[card.theme].name}</div>
-                    </div>
                 </div>
             </div>
         `;
@@ -450,11 +476,6 @@ class UIManager {
             }
         }
 
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'modal-btn secondary';
-        closeBtn.innerHTML = '<span class="btn-icon">✕</span><span class="btn-text">Fermer</span>';
-        closeBtn.addEventListener('click', () => this.closeModal());
-        this.elements.modalActions.appendChild(closeBtn);
 
         this.elements.modal.style.display = 'block';
         this.currentModal = card;
@@ -490,9 +511,15 @@ class UIManager {
 
         if (result.success) {
             try {
-                // Si on a pioché plusieurs cartes, utilise l'animation multiple
-                if (result.totalDrawn > 1) {
+                // Utilise toujours l'animation multiple (qui gère aussi les cartes uniques)
+                if (result.totalDrawn >= 1) {
                     const animationResult = await DRAW_ANIMATION.showMultipleCardsAnimation(result.groupedCards);
+
+                    // Si une seule carte, bascule sur le thème de la carte
+                    if (result.totalDrawn === 1) {
+                        const firstCard = Object.values(result.groupedCards)[0].card;
+                        this.switchTheme(firstCard.theme);
+                    }
 
                     // Après l'animation, met à jour l'affichage
                     this.render();
@@ -506,44 +533,26 @@ class UIManager {
                                 setTimeout(() => cardElement.classList.remove('new-draw'), 800);
                             }
                         });
-                    }, 300);
 
-                    // Message de pioche multiple
-                    this.showToast(`${result.totalDrawn} cartes piochées !`, 'success');
-
-                } else {
-                    // Pioche simple : utilise l'ancienne animation
-                    const firstResult = result.results[0];
-                    const animationResult = await DRAW_ANIMATION.showCardAnimation(firstResult.card, firstResult.isDuplicate);
-
-                    // Après l'animation, bascule sur le thème de la carte
-                    this.switchTheme(firstResult.card.theme);
-
-                    // Met à jour l'affichage
-                    this.render();
-
-                    // Animation de la nouvelle carte dans la collection
-                    setTimeout(() => {
-                        const cardElement = document.querySelector(`[data-card-id="${firstResult.card.id}"]`);
-                        if (cardElement) {
-                            cardElement.classList.add('new-draw');
-                            setTimeout(() => cardElement.classList.remove('new-draw'), 800);
-
-                            // Scroll vers la carte si elle n'est pas visible
-                            cardElement.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'center',
-                                inline: 'nearest'
-                            });
+                        // Si une seule carte, scroll vers elle
+                        if (result.totalDrawn === 1) {
+                            const firstCardId = Object.keys(result.groupedCards)[0];
+                            const cardElement = document.querySelector(`[data-card-id="${firstCardId}"]`);
+                            if (cardElement) {
+                                cardElement.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center',
+                                    inline: 'nearest'
+                                });
+                            }
                         }
                     }, 300);
 
-                    // Affiche un message selon le résultat
-                    if (firstResult.isDuplicate) {
-                        this.showToast(`${firstResult.message} (${firstResult.newCount} exemplaires)`, 'info');
-                    } else {
-                        this.showToast(firstResult.message, 'success');
-                    }
+                    // Message adapté selon le nombre de cartes
+                    const message = result.totalDrawn === 1
+                        ? `1 carte piochée !`
+                        : `${result.totalDrawn} cartes piochées !`;
+                    this.showToast(message, 'success');
                 }
 
             } catch (error) {
@@ -572,13 +581,9 @@ class UIManager {
             const updatedCards = CARD_SYSTEM.getCardsWithCollectionInfo();
             const updatedCard = updatedCards.find(c => c.id === card.id);
 
-            // Vérifie si on peut encore améliorer cette carte
-            if (updatedCard && updatedCard.canUpgrade) {
-                // Réaffiche la modal avec les nouvelles données
+            // Réaffiche la modal seulement si elle est encore ouverte
+            if (updatedCard && this.currentModal) {
                 this.showCardModal(updatedCard);
-            } else {
-                // Ferme la modal si plus d'amélioration possible
-                this.closeModal();
             }
 
             // Message avec crédits gagnés s'il y en a
@@ -758,6 +763,60 @@ class UIManager {
         const newCredits = DB.addCredits(1);
         this.updateStats();
         this.showToast(`+1 crédit bonus ! (${newCredits}/${CONFIG.CREDITS.MAX_STORED})`, 'success');
+    }
+
+    // Gestion des paramètres
+    openSettings() {
+        console.log('🔧 Ouverture des paramètres');
+        this.elements.settingsModal.style.display = 'block';
+        this.elements.passwordInput.value = '';
+        this.elements.passwordSection.style.display = 'block';
+        this.elements.adminControls.style.display = 'none';
+
+        // Met le focus sur le champ mot de passe avec un léger délai
+        setTimeout(() => {
+            if (this.elements.passwordInput) {
+                this.elements.passwordInput.focus();
+            }
+        }, 100);
+    }
+
+    closeSettings() {
+        this.elements.settingsModal.style.display = 'none';
+        this.elements.passwordInput.value = '';
+        this.elements.passwordSection.style.display = 'block';
+        this.elements.adminControls.style.display = 'none';
+    }
+
+    checkPassword(password) {
+        if (password === '13042018') {
+            this.elements.passwordSection.style.display = 'none';
+            this.elements.adminControls.style.display = 'block';
+            // Met le focus sur le champ de crédits avec un léger délai pour laisser le temps à l'affichage
+            setTimeout(() => {
+                if (this.elements.creditsAmountInput) {
+                    this.elements.creditsAmountInput.focus();
+                }
+            }, 100);
+        } else {
+            this.elements.adminControls.style.display = 'none';
+        }
+    }
+
+    validateAdminCredits() {
+        const amount = parseInt(this.elements.creditsAmountInput.value);
+
+        if (!amount || amount < 1 || amount > 99) {
+            this.showToast('Veuillez entrer un nombre entre 1 et 99', 'error');
+            return;
+        }
+
+        const currentCredits = DB.getCredits();
+        const newCredits = DB.addCredits(amount);
+
+        this.showToast(`+${amount} crédit${amount > 1 ? 's' : ''} bonus ajouté${amount > 1 ? 's' : ''} ! (${newCredits}/${CONFIG.CREDITS.MAX_STORED})`, 'success');
+        this.updateStats();
+        this.closeSettings();
     }
 
     // Nettoie les ressources

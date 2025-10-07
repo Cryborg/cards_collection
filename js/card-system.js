@@ -4,7 +4,8 @@ class CardSystem {
         this.currentTheme = 'minecraft';
         this.filters = {
             rarity: '',
-            search: ''
+            search: '',
+            sort: 'default'
         };
     }
 
@@ -75,12 +76,22 @@ class CardSystem {
 
         // Récupère toutes les cartes de cette rareté de base
         const allCards = DB.getAllCards();
-        const availableCards = allCards.filter(card => card.baseRarity === baseRarity);
+
+        // Filtre les cartes : même baseRarity ET pas encore légendaires
+        const availableCards = allCards.filter(card => {
+            if (card.baseRarity !== baseRarity) {
+                return false;
+            }
+
+            // Vérifie si cette carte a déjà atteint le niveau légendaire
+            const currentRarity = DB.getCardCurrentRarity(card.id);
+            return currentRarity !== 'legendary';
+        });
 
         if (availableCards.length === 0) {
             return {
                 success: false,
-                message: 'Aucune carte disponible'
+                message: 'Toutes les cartes ont atteint le niveau légendaire !'
             };
         }
 
@@ -148,7 +159,7 @@ class CardSystem {
         }
 
         // Ajoute les informations de collection
-        return filteredCards.map(card => {
+        let cardsWithInfo = filteredCards.map(card => {
             const collectionItem = collection[card.id];
             const currentRarity = DB.getCardCurrentRarity(card.id);
             const canUpgradeRarity = this.canUpgradeRarity(card.id);
@@ -170,6 +181,60 @@ class CardSystem {
             }
 
             return result;
+        });
+
+        // Applique le tri
+        cardsWithInfo = this.applySorting(cardsWithInfo);
+
+        return cardsWithInfo;
+    }
+
+    // Applique le tri sur les cartes
+    applySorting(cards) {
+        const sortType = this.filters.sort;
+
+        switch (sortType) {
+            case 'rarity-asc':
+                return this.sortByRarity(cards, 'asc');
+            case 'rarity-desc':
+                return this.sortByRarity(cards, 'desc');
+            case 'alpha-asc':
+                return this.sortAlphabetically(cards, 'asc');
+            case 'alpha-desc':
+                return this.sortAlphabetically(cards, 'desc');
+            case 'default':
+            default:
+                return cards; // Ordre original
+        }
+    }
+
+    // Tri par rareté (basé sur la rareté actuelle de la carte)
+    sortByRarity(cards, order = 'asc') {
+        const rarityOrder = ['common', 'rare', 'very_rare', 'epic', 'legendary'];
+
+        return cards.slice().sort((a, b) => {
+            const rarityA = rarityOrder.indexOf(a.currentRarity);
+            const rarityB = rarityOrder.indexOf(b.currentRarity);
+
+            if (order === 'asc') {
+                return rarityA - rarityB;
+            } else {
+                return rarityB - rarityA;
+            }
+        });
+    }
+
+    // Tri alphabétique par nom
+    sortAlphabetically(cards, order = 'asc') {
+        return cards.slice().sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+
+            if (order === 'asc') {
+                return nameA.localeCompare(nameB, 'fr');
+            } else {
+                return nameB.localeCompare(nameA, 'fr');
+            }
         });
     }
 

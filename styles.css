@@ -53,6 +53,45 @@ body {
     background: var(--bg-secondary);
     border-radius: 16px;
     border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.settings-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.settings-btn:hover,
+.settings-btn:active {
+    background: var(--bg-hover);
+    transform: rotate(90deg);
+    border-color: var(--accent-primary);
+}
+
+/* Responsive pour le bouton paramètres */
+@media (max-width: 768px) {
+    .settings-btn {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
 }
 
 .game-header h1 {
@@ -310,7 +349,16 @@ body {
     gap: 20px;
 }
 
-.draw-btn {
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.draw-btn, .bonus-btn {
+    flex: 1;
+    min-width: 200px;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     color: white;
     border: none;
@@ -324,14 +372,33 @@ body {
     overflow: hidden;
 }
 
-.draw-btn:hover:not(:disabled) {
+.bonus-btn {
+    background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+}
+
+.draw-btn:hover:not(:disabled), .bonus-btn:hover {
     transform: translateY(-2px);
+}
+
+.draw-btn:hover:not(:disabled) {
     box-shadow: 0 8px 25px rgba(74, 158, 255, 0.3);
 }
 
-.draw-btn:disabled {
-    opacity: 0.6;
+.bonus-btn:hover {
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+}
+
+.draw-btn:disabled, .bonus-btn:disabled, .bonus-btn.disabled {
+    opacity: 0.4;
     cursor: not-allowed;
+    transform: none !important;
+}
+
+.bonus-counter {
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 5px;
+    opacity: 0.9;
 }
 
 .draw-cooldown {
@@ -426,7 +493,7 @@ body {
 
 .card-image {
     width: 100%;
-    height: 150px;
+    height: 210px;
     background: linear-gradient(135deg, var(--bg-primary), var(--bg-hover));
     border-radius: 12px;
     margin-bottom: 15px;
@@ -453,7 +520,7 @@ body {
 }
 
 .card-visual-image.medium {
-    max-height: 150px;
+    max-height: 210px;
     object-fit: cover;
     object-position: center top;
 }
@@ -517,13 +584,96 @@ body {
     color: var(--text-primary);
 }
 
-.card-rarity {
-    display: inline-flex;
+.card-name {
+    text-align: center;
+    margin: 0;
+    padding-bottom: 20px;
+}
+
+/* Bandeau de rareté en bas de carte avec dégradé */
+.card-rarity-banner {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.9rem;
+    justify-content: center;
+    border-radius: 0 0 15px 15px;
+    backdrop-filter: blur(5px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-rarity-banner .rarity-text {
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 2;
+    position: relative;
+}
+
+/* Dégradés pour chaque rareté */
+.card-rarity-banner.mystery {
+    background: linear-gradient(90deg,
+        rgba(128, 128, 128, 0.9) 0%,
+        rgba(128, 128, 128, 1) 50%,
+        rgba(128, 128, 128, 0.9) 100%);
+}
+
+.card-rarity-banner.common {
+    background: linear-gradient(90deg,
+        rgba(185, 185, 185, 0.9) 0%,
+        rgba(185, 185, 185, 1) 50%,
+        rgba(185, 185, 185, 0.9) 100%);
+}
+
+.card-rarity-banner.rare {
+    background: linear-gradient(90deg,
+        rgba(52, 152, 219, 0.9) 0%,
+        rgba(52, 152, 219, 1) 50%,
+        rgba(52, 152, 219, 0.9) 100%);
+}
+
+.card-rarity-banner.very_rare {
+    background: linear-gradient(90deg,
+        rgba(155, 89, 182, 0.9) 0%,
+        rgba(155, 89, 182, 1) 50%,
+        rgba(155, 89, 182, 0.9) 100%);
+}
+
+.card-rarity-banner.epic {
+    background: linear-gradient(90deg,
+        rgba(241, 196, 15, 0.9) 0%,
+        rgba(241, 196, 15, 1) 50%,
+        rgba(241, 196, 15, 0.9) 100%);
+}
+
+.card-rarity-banner.legendary {
+    background: linear-gradient(90deg,
+        rgba(231, 76, 60, 0.9) 0%,
+        rgba(231, 76, 60, 1) 20%,
+        rgba(255, 215, 0, 1) 50%,
+        rgba(231, 76, 60, 1) 80%,
+        rgba(231, 76, 60, 0.9) 100%);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* Animation d'apparition du bandeau */
+.card-rarity-banner {
+    animation: bannerSlideUp 0.3s ease-out;
+}
+
+@keyframes bannerSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .card-points {
@@ -592,6 +742,44 @@ body {
     font-weight: 600;
     z-index: 10;
     box-shadow: 0 2px 8px rgba(74, 158, 255, 0.4);
+}
+
+/* Indicateur d'amélioration sur les cartes */
+.card-upgrade-indicator {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 6px;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: pulse-upgrade 2s ease-in-out infinite;
+}
+
+.card-upgrade-indicator:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.7);
+}
+
+@keyframes pulse-upgrade {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
 }
 
 /* Cartes mystères */
@@ -928,14 +1116,18 @@ body {
 }
 
 .modal-btn.upgrade-btn {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2));
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    color: var(--text-primary);
     flex-direction: column;
     align-items: center;
     gap: 5px;
 }
 
 .modal-btn.upgrade-btn:hover {
-    background: linear-gradient(135deg, #059669, #047857);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3));
+    border-color: rgba(16, 185, 129, 0.6);
+    transform: translateY(-2px);
 }
 
 .btn-cost {
@@ -1470,21 +1662,36 @@ body {
 
 .multiple-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
     width: 100%;
     margin-bottom: 30px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Quand il n'y a qu'une seule carte, centre-la et limite sa largeur */
+.multiple-cards-grid:has(.grouped-card:only-child) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+}
+
+.multiple-cards-grid .grouped-card:only-child {
+    max-width: 200px;
+    width: 100%;
 }
 
 .grouped-card {
-    background: var(--bg-primary);
-    border-radius: 15px;
-    padding: 15px;
-    border: 2px solid transparent;
+    background: var(--bg-card);
+    border-radius: 8px; /* 16px / 2 */
+    border: 1px solid var(--border-color); /* 2px / 2 */
+    padding: 10px; /* 20px / 2 */
+    cursor: pointer;
     transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
     opacity: 0;
     transform: translateY(20px);
-    position: relative;
 }
 
 .grouped-card.revealed {
@@ -1495,64 +1702,175 @@ body {
 .grouped-card.new-card {
     border-color: var(--rarity-rare);
     box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+    animation: wiggle-loop 2.6s ease-in-out infinite;
+}
+
+/* Animation de gigotement en boucle pour les nouvelles cartes */
+@keyframes wiggle-loop {
+    /* Gigotement pendant les premières 23% (0.6s) */
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+    3.8% { /* 15% de 23% */
+        transform: translateY(-2px) rotate(-2deg);
+    }
+    7.7% { /* 30% de 23% */
+        transform: translateY(2px) rotate(2deg);
+    }
+    11.5% { /* 45% de 23% */
+        transform: translateY(-1px) rotate(-1deg);
+    }
+    15.4% { /* 60% de 23% */
+        transform: translateY(1px) rotate(1deg);
+    }
+    19.2% { /* 75% de 23% */
+        transform: translateY(-1px) rotate(-0.5deg);
+    }
+    23% {
+        transform: translateY(0) rotate(0deg);
+    }
+    /* Pause de 2 secondes (77% du temps) */
+    23%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+}
+
+/* Bandeau "New!" diagonal dans le coin */
+.new-card-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #333;
+    padding: 2px 8px;
+    font-size: 0.6rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    z-index: 15;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    animation: pulse-new-badge 1.5s ease-in-out infinite;
+}
+
+/* Animation de pulsation pour le badge "New!" */
+@keyframes pulse-new-badge {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
 }
 
 .grouped-card.duplicate-card {
-    border-color: var(--text-secondary);
+    border-color: var(--border-color);
 }
 
-.grouped-card-visual {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 120px;
-    margin-bottom: 15px;
+/* Cartes miniatures à l'échelle 1/2 */
+.grouped-card .card-image {
+    height: 105px; /* 210px / 2 */
+    margin-bottom: 7px; /* 15px / 2 */
 }
 
-.grouped-card-visual-content.card-visual-image {
-    width: 100%;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 10px;
+.grouped-card .card-name {
+    font-size: 0.6rem; /* 1.2rem / 2 */
+    padding-bottom: 10px; /* 20px / 2 */
 }
 
-.grouped-card-visual-content.card-visual-emoji {
-    font-size: 4.5rem !important;
+.grouped-card .card-description {
+    margin-top: 5px;
+    margin-bottom: 7px;
 }
 
-.grouped-card-count {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: var(--accent-primary);
-    color: var(--text-primary);
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: bold;
-    border: 3px solid var(--bg-primary);
-    z-index: 10;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.grouped-card .card-description-inner {
+    font-size: 0.45rem; /* 0.9rem / 2 */
+    line-height: 1.3;
 }
 
-.grouped-card-name {
-    color: var(--text-primary);
-    font-size: 1.1rem;
-    font-weight: bold;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-top: auto;
+.grouped-card .card-rarity-banner {
+    height: 16px; /* 32px / 2 */
+    border-radius: 0 0 7px 7px; /* Adapté au border-radius de la carte */
+}
+
+.grouped-card .card-rarity-banner .rarity-text {
+    font-size: 0.4rem; /* 0.85rem / 2 */
+}
+
+.grouped-card .card-count {
+    padding: 2px 4px; /* 4px 8px / 2 */
+    border-radius: 6px; /* 12px / 2 */
+    font-size: 0.4rem; /* 0.8rem / 2 */
+    top: 5px; /* 10px / 2 */
+    right: 5px; /* 10px / 2 */
+}
+
+.grouped-card .new-card-badge {
+    top: 3px;
+    left: 3px;
+    padding: 1px 5px;
+    font-size: 0.3rem;
+    transform: rotate(-45deg);
 }
 
 .card.new-draw {
     animation: cardDraw 0.8s ease-out;
+}
+
+/* Modale de paramètres */
+.settings-content {
+    padding: 20px 0;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.setting-item input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.setting-item input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.credits-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.settings-btn-action {
+    padding: 10px 20px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--accent-primary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-weight: bold;
+}
+
+.settings-btn-action:hover {
+    background: var(--accent-primary);
+    color: white;
+    transform: translateY(-2px);
 }
 
 /* Responsive */
